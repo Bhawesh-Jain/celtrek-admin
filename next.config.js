@@ -20,7 +20,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'admin.celtrek.com',
+        hostname: 'admin.celtrek.in',
       },
     ],
   },
