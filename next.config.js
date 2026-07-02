@@ -18,6 +18,10 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'irajweb.in',
       },
+      {
+        protocol: 'https',
+        hostname: 'admin.celtrek.com',
+      },
     ],
   },
   experimental: {
