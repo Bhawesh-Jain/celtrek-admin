@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Receipt</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4A90E2;
+      --text: #333333;
+      --muted: #777777;
+      --light-bg: #F7F9FB;
+      --border: #E2E8F0;
+      --success: #28A745;
+      --warning: #FFC107;
+      --danger: #DC3545;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--light-bg);
+      color: var(--text);
+      padding: 20px;
+    }
+
+    .receipt-container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 20px 30px;
+      position: relative;
+    }
+
+    header img {
+      max-height: 50px;
+      margin-bottom: 10px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    header p {
+      font-size: 14px;
+      font-weight: 300;
+    }
+
+    .status-badge {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.Paid   { background: var(--success); }
+    .status-badge.Pending{ background: var(--warning); }
+    .status-badge.Failed { background: var(--danger); }
+
+    .content {
+      padding: 30px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--primary);
+      border-bottom: 2px solid var(--light-bg);
+      padding-bottom: 6px;
+    }
+
+    .details-table,
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .details-table td {
+      padding: 8px 4px;
+      font-size: 14px;
+    }
+
+    .details-table td.label {
+      color: var(--muted);
+      width: 35%;
+    }
+
+    .details-table td.value {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .receipt-table th,
+    .receipt-table td {
+      border: 1px solid var(--border);
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    .receipt-table th {
+      background: var(--light-bg);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .receipt-summary {
+      text-align: right;
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 20px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px dashed var(--border);
+      padding-top: 15px;
+      margin-top: 30px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 20px 0;
+    }
+
+    /* Print optimizations */
+    @media print {
+      body {
+        padding: 0;
+        background: #fff;
+      }
+      .receipt-container {
+        box-shadow: none;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="receipt-container">
+
+    <!-- HEADER -->
+    <header>
+      <div class="status-badge {{paymentStatus}}">{{paymentStatus}}</div>
+      {{#if companyLogoUrl}}
+      <img src="{{companyLogoUrl}}" alt="{{companyName}} Logo" />
+      {{/if}}
+      <h1>{{companyName}}</h1>
+      <p>{{companyAddress}}</p>
+      {{#if companyContact}}<p>Contact: {{companyContact}}</p>{{/if}}
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+      <div class="grid-2">
+        <!-- Receipt Info -->
+        <div>
+          <h2>Receipt Information</h2>
+          <table class="details-table">
+            <tr><td class="label">Receipt #</td><td class="value">{{receiptNumber}}</td></tr>
+            <tr><td class="label">Payment Date</td><td class="value">{{paymentDate}}</td></tr>
+            <tr><td class="label">Generated</td><td class="value">{{receiptGenerationDate}}</td></tr>
+            <tr><td class="label">Method</td><td class="value">{{paymentMethod}}</td></tr>
+            {{#if utrNumber}}
+            <tr><td class="label">UTR / Ref #</td><td class="value">{{utrNumber}}</td></tr>
+            {{/if}}
+          </table>
+        </div>
+
+        <!-- Customer Details -->
+        <div>
+          <h2>Customer Details</h2>
+          <table class="details-table">
+            <tr><td class="label">Name</td><td class="value">{{customerName}}</td></tr>
+            <tr><td class="label">Lender</td><td class="value">{{lendorName}}</td></tr>
+            <tr><td class="label">Loan Ref</td><td class="value">{{loanRef}}</td></tr>
+            <tr><td class="label">Due Date</td><td class="value">{{dueDate}}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Loan Info -->
+        <div>
+          <h2>Loan Information</h2>
+          <table class="details-table">
+            <tr>
+              <td class="label">Amount</td>
+              <td class="value">{{currencySymbol}} {{loanAmount}}</td>
+            </tr>
+            <tr>
+              <td class="label">EMI</td>
+              <td class="value">{{currencySymbol}} {{loanEmiAmount}}</td>
+            </tr>
+            <tr>
+              <td class="label">Type</td>
+              <td class="value">{{loanType}}</td>
+            </tr>
+            <tr>
+              <td class="label">Tenure</td>
+              <td class="value">{{loanTenure}} Months</td>
+            </tr>
+            <tr>
+              <td class="label">Interest</td>
+              <td class="value">{{interestRate}}%</td>
+            </tr>
+            <tr>
+              <td class="label">Start Date</td>
+              <td class="value">{{loanStartDate}}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Payment Breakdown -->
+        <div>
+          <h2>Payment Details</h2>
+          <table class="receipt-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Collection Amount</td>
+                <td>{{dueDate}}</td>
+                <td>{{currencySymbol}} {{amount}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="receipt-summary">
+            Total Paid: {{currencySymbol}} {{amount}}
+          </div>
+        </div>
+      </div>
+
+      <!-- META & FOOTER -->
+      <div class="meta">
+        <div>Receipt Status: <strong>{{paymentStatus}}</strong></div>
+        <div>Generated on: {{receiptGenerationDate}}</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Thank you for your payment.</p>
+      <p>If you have questions, please contact us at {{companyContact}}.</p>
+      <p>This receipt was electronically generated and is valid without a signature.</p>
+    </footer>
+
+  </div>
+</body>
+
+</html>
