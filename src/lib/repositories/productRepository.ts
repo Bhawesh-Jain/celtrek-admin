@@ -207,7 +207,7 @@ export class ProductRepository extends RepositoryBase {
   async getRecentProducts(limit = 5) {
     try {
       const sql = `
-        SELECT product_id, product_name, product_slug, base_price, created_on
+        SELECT product_id, product_name, product_slug, base_price, sale_price, created_on
         FROM products
         WHERE company_id = ?
           AND status = 1
