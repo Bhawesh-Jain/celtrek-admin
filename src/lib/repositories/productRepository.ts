@@ -330,8 +330,6 @@ export class ProductRepository extends RepositoryBase {
 
       product.related_products = relatedProducts;
 
-      console.log(product);
-
       return this.success(product);
     } catch (error) {
       return this.handleError(error);

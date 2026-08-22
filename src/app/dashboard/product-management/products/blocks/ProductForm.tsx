@@ -1372,7 +1372,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                       disabled={isSubmitting}
                     />
 
-                    {/* <DefaultFormTextField
+                    <DefaultFormTextField
                         form={form}
                         name="sale_price"
                         label="Sale Price ($)"
@@ -1380,7 +1380,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                         type="number"
                         step="0.01"
                         disabled={isSubmitting}
-                      /> */}
+                      />
                     <DefaultFormTextField
                       form={form}
                       name="sku"
