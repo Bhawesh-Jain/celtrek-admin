@@ -167,14 +167,14 @@ export default function DashboardPage() {
                         <span className="text-sm font-medium">{lead.name}</span>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="h-3 w-3" /> {lead.phone}
-                          {lead.product_name && <span className="ml-1">· {lead.product_name}</span>}
+                          {lead.product_name && <span className="ml-1">{lead.product_name}</span>}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge className={STATUS_CONFIG[lead.status]?.className}>
                           {STATUS_CONFIG[lead.status]?.label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground hidden sm:inline">
+                        <span className="text-xs text-muted-foreground text-nowrap hidden sm:inline">
                           {formatDate(lead.created_on, 'dd-MM-yyyy')}
                         </span>
                       </div>

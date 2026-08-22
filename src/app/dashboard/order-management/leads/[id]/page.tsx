@@ -201,18 +201,21 @@ export default function LeadDetailPage() {
 
   return (
     <Container>
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-semibold">{lead.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            Lead received {formatDate(lead.created_on, "dd-MM-yyyy")} via{" "}
-            {lead.source.replace(/_/g, " ")}
-          </p>
+      <div className="flex flex-col md:flex-row items-center gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">{lead.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              Lead received {formatDate(lead.created_on, "dd-MM-yyyy")} via{" "}
+              {lead.source.replace(/_/g, " ")}
+            </p>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+
+        <div className="md:ml-auto flex items-center gap-2">
           <Select
             value={lead.assigned_to ? String(lead.assigned_to) : undefined}
             onValueChange={handleAssign}
