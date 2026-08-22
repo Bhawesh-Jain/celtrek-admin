@@ -1,7 +1,15 @@
-import { executeQuery, QueryBuilder, withTransaction } from "../helpers/db-helper";
+import {
+  executeQuery,
+  QueryBuilder,
+  withTransaction,
+} from "../helpers/db-helper";
 import { RepositoryBase } from "../helpers/repository-base";
 import { File } from "fetch-blob/file.js";
-import { deleteFileFromIdentifier, getFileUrl, saveFile } from "../helpers/file-helper";
+import {
+  deleteFileFromIdentifier,
+  getFileUrl,
+  saveFile,
+} from "../helpers/file-helper";
 import { ProductImage } from "@/app/types/product-types";
 import { FileRepository } from "./sys/fileRepository";
 
@@ -36,25 +44,45 @@ export class ProductRepository extends RepositoryBase {
   async getProductList({
     status = 1,
     category_id,
-    modifier = '=',
+    modifier = "=",
     featured,
+    page = 1,
+    limit = 12,
   }: {
-    status?: number,
-    modifier?: string,
-    category_id?: string,
-    featured?: boolean,
+    status?: number;
+    modifier?: string;
+    category_id?: string;
+    featured?: boolean;
+    page?: number;
+    limit?: number;
   }) {
     try {
-      let parmas: any[] = [];
-      parmas.push(this.companyId);
-      parmas.push(this.companyId);
-      parmas.push(this.companyId);
-      parmas.push(status);
+      const offset = (page - 1) * limit;
 
-      if (category_id) {
-        parmas.push(category_id);
-      }
-      
+      // ── Count (same WHERE clause, no LIMIT) ──────────────────────────
+      let countParams: any[] = [this.companyId, status];
+      let countSql = `
+      SELECT COUNT(*) AS total
+      FROM products p
+      WHERE p.company_id = ?
+        AND p.status ${modifier} ?
+        ${featured ? " AND p.is_featured = 1" : ""}
+        ${category_id ? " AND p.category_id = ?" : ""}
+    `;
+      if (category_id) countParams.push(category_id);
+
+      const countRes = (await executeQuery(countSql, countParams)) as any[];
+      const total = countRes[0]?.total ?? 0;
+
+      // ── Page of results ───────────────────────────────────────────────
+      let params: any[] = [
+        this.companyId,
+        this.companyId,
+        this.companyId,
+        status,
+      ];
+      if (category_id) params.push(category_id);
+
       let sql = `
         SELECT 
           p.product_name,
@@ -68,6 +96,7 @@ export class ProductRepository extends RepositoryBase {
           p.updated_on,
           u.name as creator_name,
           c.category_name,
+          p.category_id,
 
           COALESCE(pv1.variant_id, pv2.variant_id) AS default_variant_id,
           COALESCE(pv1.variant_name, pv2.variant_name) AS variant_name,
@@ -90,13 +119,11 @@ export class ProductRepository extends RepositoryBase {
         LEFT JOIN categories c
           ON c.category_id = p.category_id
 
-        -- main image
         LEFT JOIN file_log fl 
           ON fl.id = p.product_main_image
           AND fl.status = 1
           AND fl.company_id = ?
 
-        -- fallback image
         LEFT JOIN file_log fallback_fl
           ON fallback_fl.id = (
                 SELECT id
@@ -119,20 +146,27 @@ export class ProductRepository extends RepositoryBase {
 
         WHERE p.company_id = ?
           AND p.status ${modifier} ?
-          ${featured ? ` AND p.is_featured = 1` : ''}
-          ${category_id ? ` AND p.category_id = ?` : ''}
+          ${featured ? ` AND p.is_featured = 1` : ""}
+          ${category_id ? ` AND p.category_id = ?` : ""}
+
+        ORDER BY p.product_id DESC
+        LIMIT ${limit} OFFSET ${offset}
       `;
-
-
-
-      const res = await executeQuery(sql, parmas) as any[];
+      console.log(sql, params);
+      
+      const res = (await executeQuery(sql, params)) as any[];
 
       for (let i = 0; i < res.length; i++) {
-        const product = res[i];
-        product.product_image = getFileUrl(product.product_image);
+        res[i].product_image = getFileUrl(res[i].product_image);
       }
 
-      return this.success(res);
+      return this.success({
+        items: res,
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      });
     } catch (error) {
       return this.handleError(error);
     }
@@ -140,10 +174,10 @@ export class ProductRepository extends RepositoryBase {
 
   async getProductById({
     identifier,
-    active = true
+    active = true,
   }: {
-    identifier: string
-    active?: boolean
+    identifier: string;
+    active?: boolean;
   }) {
     try {
       let sql = `
@@ -159,39 +193,41 @@ export class ProductRepository extends RepositoryBase {
           ON c.category_id = p.category_id
 
         WHERE (p.product_id = ? OR p.product_slug = ?)
-          ${active && 'AND p.status >= 0'}
+          ${active && "AND p.status >= 0"}
         LIMIT 1
       `;
 
-      const res = await executeQuery(sql, [identifier, identifier]) as any[];
+      const res = (await executeQuery(sql, [identifier, identifier])) as any[];
 
       if (res.length == 0) {
-        return this.failure('Invaid Product!');
+        return this.failure("Invaid Product!");
       }
       const product = res[0];
 
-      const productImageRes = await new QueryBuilder('file_log')
+      const productImageRes = (await new QueryBuilder("file_log")
         .where("associated_type = 'product_image'")
-        .where('associated_id = ?', product.product_id)
-        .where('status = 1')
-        .where('company_id = ?', this.companyId)
-        .select(['identifier', 'id']) as any[];
+        .where("associated_id = ?", product.product_id)
+        .where("status = 1")
+        .where("company_id = ?", this.companyId)
+        .select(["identifier", "id"])) as any[];
 
-      const productImages = productImageRes.map((item) => { return getFileUrl(item.identifier) });
+      const productImages = productImageRes.map((item) => {
+        return getFileUrl(item.identifier);
+      });
       product.product_images = productImages;
       product.product_images_obj = productImageRes;
 
-      const variants = await new QueryBuilder('product_variants')
-        .where('product_id = ?', product.product_id)
-        .where('status = 1')
+      const variants = await new QueryBuilder("product_variants")
+        .where("product_id = ?", product.product_id)
+        .where("status = 1")
         .select();
 
       product.product_variants = variants;
       product.total_variants = variants.length;
 
-      const details = await new QueryBuilder('product_details')
-        .where('product_id = ?', product.product_id)
-        .where('status = 1')
+      const details = await new QueryBuilder("product_details")
+        .where("product_id = ?", product.product_id)
+        .where("status = 1")
         .select();
 
       product.product_details = details;
@@ -202,19 +238,18 @@ export class ProductRepository extends RepositoryBase {
     }
   }
 
-  async createProduct(
-    userId: string,
-    data: any,
-  ) {
+  async createProduct(userId: string, data: any) {
     try {
       return withTransaction(async (connection) => {
-        const slug = await new QueryBuilder('products')
-          .where('product_slug = ?', data.product_slug)
-          .where('company_id = ?', this.companyId)
+        const slug = await new QueryBuilder("products")
+          .where("product_slug = ?", data.product_slug)
+          .where("company_id = ?", this.companyId)
           .selectOne();
 
         if (slug) {
-          return this.failure('Product slug already exists! Try to change the slug in the Basic Tab@');
+          return this.failure(
+            "Product slug already exists! Try to change the slug in the Basic Tab@",
+          );
         }
 
         const product = {
@@ -231,23 +266,23 @@ export class ProductRepository extends RepositoryBase {
           updated_by: userId,
           company_id: this.companyId,
           has_variants: data.variants.length > 1,
-          status: data.status
+          status: data.status,
         };
 
-        const productId = await new QueryBuilder('products')
+        const productId = await new QueryBuilder("products")
           .setConnection(connection)
           .insert(product);
 
         for (let i = 0; i < data.product_details.length; i++) {
           const detail = data.product_details[i];
 
-          await new QueryBuilder('product_details')
+          await new QueryBuilder("product_details")
             .setConnection(connection)
             .insert({
               product_id: productId,
               product_name: detail,
               updated_by: userId,
-              status: 1
+              status: 1,
             });
         }
 
@@ -268,10 +303,10 @@ export class ProductRepository extends RepositoryBase {
             width: variant.dimensions.width,
             height: variant.dimensions.height,
             status: 1,
-            updated_by: userId
+            updated_by: userId,
           };
 
-          const varId = await new QueryBuilder('product_variants')
+          const varId = await new QueryBuilder("product_variants")
             .setConnection(connection)
             .insert(varIns);
 
@@ -281,38 +316,37 @@ export class ProductRepository extends RepositoryBase {
         }
 
         if (defaultVariant) {
-          await new QueryBuilder('products')
+          await new QueryBuilder("products")
             .setConnection(connection)
-            .where('product_id = ?', productId)
+            .where("product_id = ?", productId)
             .update({
-              default_variant_id: defaultVariant
+              default_variant_id: defaultVariant,
             });
         }
 
-        return this.success({
-          product_id: productId
-        }, 'Product Added!');
+        return this.success(
+          {
+            product_id: productId,
+          },
+          "Product Added!",
+        );
       });
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateProduct(
-    productId: string,
-    userId: string,
-    data: any,
-  ) {
+  async updateProduct(productId: string, userId: string, data: any) {
     try {
       return withTransaction(async (connection) => {
-        const slug = await new QueryBuilder('products')
-          .where('product_slug = ?', data.product_slug)
-          .where('product_id != ?', productId)
-          .where('company_id = ?', this.companyId)
-          .selectOne()
+        const slug = await new QueryBuilder("products")
+          .where("product_slug = ?", data.product_slug)
+          .where("product_id != ?", productId)
+          .where("company_id = ?", this.companyId)
+          .selectOne();
 
         if (slug) {
-          return this.failure('Product slug already exists! Try another slug.');
+          return this.failure("Product slug already exists! Try another slug.");
         }
 
         const productUpdate = {
@@ -329,34 +363,34 @@ export class ProductRepository extends RepositoryBase {
           meta_description: data.meta_description,
           has_variants: data.variants.length > 1,
           updated_by: userId,
-        }
+        };
 
-        const res = await new QueryBuilder('products')
+        const res = await new QueryBuilder("products")
           .setConnection(connection)
-          .where('product_id = ?', productId)
-          .update(productUpdate)
+          .where("product_id = ?", productId)
+          .update(productUpdate);
 
         if (res <= 0) {
-          return this.failure('Update Failed!');
+          return this.failure("Update Failed!");
         }
 
-        await new QueryBuilder('product_details')
+        await new QueryBuilder("product_details")
           .setConnection(connection)
-          .where('product_id = ?', productId)
-          .delete()
+          .where("product_id = ?", productId)
+          .delete();
 
         for (const detail of data.product_details) {
-          await new QueryBuilder('product_details')
+          await new QueryBuilder("product_details")
             .setConnection(connection)
             .insert({
               product_id: productId,
               product_name: detail,
               updated_by: userId,
               status: 1,
-            })
+            });
         }
 
-        let defaultVariantId: number | null = null
+        let defaultVariantId: number | null = null;
 
         for (const variant of data.variants) {
           const variantPayload = {
@@ -373,79 +407,80 @@ export class ProductRepository extends RepositoryBase {
             height: variant.dimensions.height,
             updated_by: userId,
             status: 1,
-          }
+          };
 
           if (variant.variant_id) {
-            await new QueryBuilder('product_variants')
+            await new QueryBuilder("product_variants")
               .setConnection(connection)
-              .where('variant_id = ?', variant.variant_id)
-              .where('product_id = ?', productId)
-              .update(variantPayload)
+              .where("variant_id = ?", variant.variant_id)
+              .where("product_id = ?", productId)
+              .update(variantPayload);
 
             if (variant.is_default) {
-              defaultVariantId = variant.variant_id
+              defaultVariantId = variant.variant_id;
             }
           } else {
             // INSERT new variant
-            const newVarId = await new QueryBuilder('product_variants')
+            const newVarId = await new QueryBuilder("product_variants")
               .setConnection(connection)
-              .insert(variantPayload)
+              .insert(variantPayload);
 
             if (variant.is_default) {
-              defaultVariantId = newVarId
+              defaultVariantId = newVarId;
             }
           }
         }
 
         if (defaultVariantId) {
-          await new QueryBuilder('products')
+          await new QueryBuilder("products")
             .setConnection(connection)
-            .where('product_id = ?', productId)
+            .where("product_id = ?", productId)
             .update({
               default_variant_id: defaultVariantId,
-            })
-        }
-
-        return this.success('Product Updated!');
-      })
-    } catch (error) {
-      return this.handleError(error)
-    }
-  }
-
-  async updateProductImages(
-    productId: string,
-    existingImagesToUpdate: ProductImage[]
-  ) {
-    try {
-      for (let i = 0; i < existingImagesToUpdate.length; i++) {
-        const image = existingImagesToUpdate[i];
-        if (image.is_main) {
-          await new QueryBuilder('products')
-            .where('product_id = ?', productId)
-            .update({
-              product_main_image: image.id
             });
         }
-      }
 
-      return this.success('Product Image Updated!');
+        return this.success("Product Updated!");
+      });
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async deleteProductImages(
-    images: ProductImage[]
+  async updateProductImages(
+    productId: string,
+    existingImagesToUpdate: ProductImage[],
   ) {
+    try {
+      for (let i = 0; i < existingImagesToUpdate.length; i++) {
+        const image = existingImagesToUpdate[i];
+        if (image.is_main) {
+          await new QueryBuilder("products")
+            .where("product_id = ?", productId)
+            .update({
+              product_main_image: image.id,
+            });
+        }
+      }
+
+      return this.success("Product Image Updated!");
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async deleteProductImages(images: ProductImage[]) {
     try {
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
 
-        await deleteFileFromIdentifier({ companyId: this.companyId, identifier: image.id })
+        await deleteFileFromIdentifier({
+          companyId: this.companyId,
+          identifier: image.id,
+        });
       }
 
-      return this.success('Product Image Updated!');
+      return this.success("Product Image Updated!");
     } catch (error) {
       return this.handleError(error);
     }
@@ -458,71 +493,79 @@ export class ProductRepository extends RepositoryBase {
     image: File,
   ) {
     try {
-      const res = await saveFile(this.companyId, image, 'product_image', productId, 'product_image', './uploads/product', 'updateProductImage', 0, userId)
+      const res = await saveFile(
+        this.companyId,
+        image,
+        "product_image",
+        productId,
+        "product_image",
+        "./uploads/product",
+        "updateProductImage",
+        0,
+        userId,
+      );
 
-      if (is_main == '1' && res.success) {
-        await new QueryBuilder('products')
-          .where('product_id = ?', productId)
+      if (is_main == "1" && res.success) {
+        await new QueryBuilder("products")
+          .where("product_id = ?", productId)
           .update({
-            product_main_image: res.fileId
+            product_main_image: res.fileId,
           });
       }
 
-      return this.success(res, 'Product Image Updated!');
+      return this.success(res, "Product Image Updated!");
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async deleteProduct(
-    productId: string,
-  ) {
+  async deleteProduct(productId: string) {
     try {
       return withTransaction(async (connection) => {
-        await new QueryBuilder('products')
+        await new QueryBuilder("products")
           .setConnection(connection)
-          .where('product_id = ?', productId)
+          .where("product_id = ?", productId)
           .update({
-            status: -1
-          })
+            status: -1,
+          });
 
-        const images = await new FileRepository(this.companyId)
-          .getFileFromType(productId, 'product_image', connection, true);
+        const images = await new FileRepository(this.companyId).getFileFromType(
+          productId,
+          "product_image",
+          connection,
+          true,
+        );
 
         for (let i = 0; i < images.result.length; i++) {
           const image = images.result[i];
-          
+
           await deleteFileFromIdentifier({
             companyId: this.companyId,
             identifier: image.identifier,
-            transaction: connection
-          })
+            transaction: connection,
+          });
         }
 
-        return this.success('Product Deleted!');
+        return this.success("Product Deleted!");
       });
     } catch (error) {
       return this.handleError(error);
     }
   }
 
-  async updateProductStatus(
-    field: string,
-    status: string,
-    productId: string,
-  ) {
+  async updateProductStatus(field: string, status: string, productId: string) {
     try {
-      const res = await new QueryBuilder('products')
-        .where('product_id = ?', productId)
+      const res = await new QueryBuilder("products")
+        .where("product_id = ?", productId)
         .update({
-          [field]: status
-        })
+          [field]: status,
+        });
 
       if (res <= 0) {
-        return this.failure('Update Failed!')
+        return this.failure("Update Failed!");
       }
 
-      return this.success('Product Updated!');
+      return this.success("Product Updated!");
     } catch (error) {
       return this.handleError(error);
     }

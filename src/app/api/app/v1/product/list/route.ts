@@ -10,15 +10,16 @@ export async function POST(request: NextRequest) {
     const req = await request.json();
     var validate = await apiValidate({ origin, req: req, header: request.headers });
 
-    let featured = req['featured'];
-
     if (!validate.success) {
       message = validate.message;
       return apiFailure({ message, status: 401 });
     }
 
+    let featured = req['featured'];
     let companyId = req['company_id'];
     let category_id = req['category_id'];
+    let page = Number(req['page']) || 1;
+    let limit = Number(req['limit']) || 12;
 
     if (!companyId) companyId = DEFAULT_COMPANY_ID;
 
@@ -27,14 +28,15 @@ export async function POST(request: NextRequest) {
     }
 
     const repo = new ProductRepository(companyId);
-
-    const data = await repo.getProductList({ status: 1, modifier: '=', featured, category_id });
+    const data = await repo.getProductList({ status: 1, modifier: '=', featured, category_id, page, limit });
 
     if (!data.success) {
-      message.push(data.message)
+      message.push(data.message);
       return apiFailure({ message });
     }
 
+    console.log(data);
+    
     return apiSuccess({ data: data.result });
   } catch (error) {
     return apiError({ origin, error });
