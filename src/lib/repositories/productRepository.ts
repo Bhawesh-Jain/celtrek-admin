@@ -10,27 +10,32 @@ import {
   getFileUrl,
   saveFile,
 } from "../helpers/file-helper";
-import { ProductImage } from "@/app/types/product-types";
+import { ProductImage, ProductVariant } from "@/app/types/product-types";
 import { FileRepository } from "./sys/fileRepository";
+
+interface RelatedProduct {
+  product_id: number;
+  product_name: string;
+  product_slug: string;
+  base_price: string;
+  sku: string;
+  category_id: number;
+  category_name: string;
+  product_image: string | null;
+}
 
 export interface Product {
   product_id: number;
-  company_id: number;
-
   product_name: string;
-  product_image: string;
-
-  total_variants: number;
-  base_price: number;
-
-  updated_by: number;
-  creator_name: string;
-  variant_name: string;
-  price: string;
-
-  status: number;
-  created_on: string;
-  updated_on: string;
+  product_slug: string;
+  category_name: string;
+  product_description: string;
+  base_price: string;
+  sku: string;
+  is_featured: number;
+  product_images: string[];
+  product_variants: ProductVariant[];
+  related_products: RelatedProduct[];
 }
 
 export class ProductRepository extends RepositoryBase {
@@ -268,6 +273,64 @@ export class ProductRepository extends RepositoryBase {
         .select();
 
       product.product_details = details;
+      const relatedProducts = (await executeQuery(
+        `
+          SELECT
+            p.product_id,
+            p.product_name,
+            p.product_slug,
+            p.base_price,
+            p.sku,
+            p.category_id,
+            c.category_name,
+            COALESCE(fl.identifier, fallback_fl.identifier) AS product_image
+          FROM products p
+
+          LEFT JOIN categories c
+            ON c.category_id = p.category_id
+
+          LEFT JOIN file_log fl
+            ON fl.id = p.product_main_image
+            AND fl.status = 1
+            AND fl.company_id = ?
+
+          LEFT JOIN file_log fallback_fl
+            ON fallback_fl.id = (
+              SELECT id
+              FROM file_log
+              WHERE product_id = p.product_id
+                AND status = 1
+                AND company_id = ?
+              ORDER BY id ASC
+              LIMIT 1
+            )
+
+          WHERE p.company_id = ?
+            AND p.status = 1
+            AND p.product_id != ?
+            AND p.category_id = ?
+
+          ORDER BY p.is_featured DESC, p.product_id DESC
+          LIMIT 4
+        `,
+        [
+          this.companyId,
+          this.companyId,
+          this.companyId,
+          product.product_id,
+          product.category_id,
+        ],
+      )) as any[];
+
+      for (const related of relatedProducts) {
+        related.product_image = related.product_image
+          ? getFileUrl(related.product_image)
+          : null;
+      }
+
+      product.related_products = relatedProducts;
+
+      console.log(product);
 
       return this.success(product);
     } catch (error) {

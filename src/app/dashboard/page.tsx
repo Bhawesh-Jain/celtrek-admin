@@ -161,13 +161,14 @@ export default function DashboardPage() {
                     <Link
                       key={lead.lead_id}
                       href={`/dashboard/order-management/leads/${encryptIdForUrl(String(lead.lead_id))}?h=Lead Details`}
-                      className="flex items-center justify-between py-3 hover:bg-muted/50 -mx-2 px-2 rounded-lg transition-colors"
+                      className="flex items-center justify-between py-3 hover:bg-muted/50 px-2 rounded-lg transition-colors"
                     >
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{lead.name}</span>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="h-3 w-3" /> {lead.phone}
                           {lead.product_name && <span className="ml-1">{lead.product_name}</span>}
+                          {lead.message && <span className="ml-1">{lead.message}</span>}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
