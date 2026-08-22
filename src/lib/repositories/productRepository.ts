@@ -10,7 +10,7 @@ import {
   getFileUrl,
   saveFile,
 } from "../helpers/file-helper";
-import { ProductImage, ProductVariant } from "@/app/types/product-types";
+import { ProductImage } from "@/app/types/product-types";
 import { FileRepository } from "./sys/fileRepository";
 
 interface RelatedProduct {
@@ -26,16 +26,22 @@ interface RelatedProduct {
 
 export interface Product {
   product_id: number;
+  company_id: number;
+
   product_name: string;
-  product_slug: string;
-  category_name: string;
-  product_description: string;
-  base_price: string;
-  sku: string;
-  is_featured: number;
-  product_images: string[];
-  product_variants: ProductVariant[];
-  related_products: RelatedProduct[];
+  product_image: string;
+
+  total_variants: number;
+  base_price: number;
+
+  updated_by: number;
+  creator_name: string;
+  variant_name: string;
+  price: string;
+
+  status: number;
+  created_on: string;
+  updated_on: string;
 }
 
 export class ProductRepository extends RepositoryBase {
@@ -329,6 +335,8 @@ export class ProductRepository extends RepositoryBase {
       }
 
       product.related_products = relatedProducts;
+
+      console.log(product);
 
       return this.success(product);
     } catch (error) {
