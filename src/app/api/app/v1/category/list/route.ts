@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     const categoryRepostiory = new CategoryRepository(companyId);
 
     const data = await categoryRepostiory.getCategoryList({ status: 1, modifier: '=', count: true });
-    console.log(data);
     
     if (!data.success) {
       message.push(data.message)

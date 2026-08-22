@@ -59,8 +59,6 @@ export async function POST(request: NextRequest) {
       return apiFailure({ message });
     }
 
-    console.log(data);
-
     return apiSuccess({ data: data.result });
   } catch (error) {
     return apiError({ origin, error });
