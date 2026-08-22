@@ -4,11 +4,19 @@ import { ProductImage } from "@/app/types/product-types";
 import { ProductRepository } from "../repositories/productRepository";
 import { getSession } from "../session";
 
-export async function getProductList({ }) {
+export async function getProductList({
+  page = 1,
+  limit = 10,
+  search,
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
   const session = await getSession();
 
   const repo = new ProductRepository(session.company_id);
-  return await repo.getProductList({ status: 0, modifier: '>' });
+  return await repo.getProductList({ status: 0, modifier: '>', page, limit, search });
 }
 
 export async function getProductById(identifier: string) {

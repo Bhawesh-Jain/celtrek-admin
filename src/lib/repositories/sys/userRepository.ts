@@ -231,12 +231,25 @@ export class UserRepository extends RepositoryBase {
           AND u.status > 0
         ORDER BY u.name ASC
       `;
-      const users = await executeQuery(sql, [this.companyId]) as User[];
+      const users = (await executeQuery(sql, [this.companyId])) as User[];
 
       if (users && users.length > 0) {
         return this.success(users);
       }
       return this.failure("No users found");
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getUserCount() {
+    try {
+      const count = await this.queryBuilder
+        .where("company_id = ?", this.companyId)
+        .where("status = ?", 1)
+        .count();
+
+      return this.success(count);
     } catch (error) {
       return this.handleError(error);
     }

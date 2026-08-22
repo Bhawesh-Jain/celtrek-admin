@@ -9,16 +9,22 @@ import { deleteProduct, getProductList, updateProductStatus } from "@/lib/action
 import formatDate from "@/lib/utils/date";
 import { Button, ButtonTooltip } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Product } from "@/lib/repositories/productRepository";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { encryptIdForUrl } from "@/lib/utils/crypto";
 import ZoomableImage from "@/components/ZoomableImage";
 
+const PAGE_SIZE = 10;
 
 export default function ProductListPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState("");
   const [reload, setReload] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const { showError, showDeleteConfirmation, setDialogLoading, showSuccess } = useGlobalDialog();
@@ -28,10 +34,21 @@ export default function ProductListPage() {
     if (!reload) return;
     (async () => {
       setIsLoading(true);
-      setItems([]);
       try {
-        const result = await getProductList({});
-        setItems(result.result || []);
+        const result = await getProductList({ page, limit: PAGE_SIZE, search: search || undefined });
+        const data = result.result;
+
+        // Supports both the paginated shape ({items, total, totalPages})
+        // and a plain array fallback, in case the repo hasn't been updated yet.
+        if (Array.isArray(data)) {
+          setItems(data);
+          setTotal(data.length);
+          setTotalPages(1);
+        } else {
+          setItems(data?.items || []);
+          setTotal(data?.total || 0);
+          setTotalPages(data?.totalPages || 1);
+        }
       } catch (error: any) {
         showError("Request Failed!", error?.message || error.toString());
       } finally {
@@ -39,7 +56,7 @@ export default function ProductListPage() {
         setReload(false);
       }
     })();
-  }, [reload]);
+  }, [reload, page, search]);
 
   const itemsRef = useRef<any[]>([]);
 
@@ -101,6 +118,10 @@ export default function ProductListPage() {
 
           if (result.success) {
             showSuccess('Request Successful', result.result);
+            // If we just deleted the last item on this page, step back a page
+            if (items.length === 1 && page > 1) {
+              setPage((p) => p - 1);
+            }
             setReload(true);
           } else {
             showError('Error', result.message);
@@ -113,6 +134,13 @@ export default function ProductListPage() {
       }
     );
   }
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1); // reset to page 1 whenever the search term changes
+    setReload(true);
+  };
+
   const columns: Column<Product>[] = [
     {
       id: "product_image",
@@ -217,13 +245,50 @@ export default function ProductListPage() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="relative mb-4 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                defaultValue={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
             <DataTable
               data={items}
               columns={columns}
               fillEmpty={true}
+              searchable={false}
               loading={isLoading}
               setReload={setReload}
             />
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages} · {total} product{total === 1 ? "" : "s"} total
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1 || isLoading}
+                    onClick={() => { setPage((p) => p - 1); setReload(true); }}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages || isLoading}
+                    onClick={() => { setPage((p) => p + 1); setReload(true); }}
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Container>
       }

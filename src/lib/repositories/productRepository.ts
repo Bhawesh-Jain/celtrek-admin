@@ -46,12 +46,14 @@ export class ProductRepository extends RepositoryBase {
     category_id,
     modifier = "=",
     featured,
+    search,
     page = 1,
     limit = 12,
   }: {
     status?: number;
     modifier?: string;
     category_id?: string;
+    search?: string;
     featured?: boolean;
     page?: number;
     limit?: number;
@@ -82,6 +84,11 @@ export class ProductRepository extends RepositoryBase {
         status,
       ];
       if (category_id) params.push(category_id);
+
+      if (search) {
+        params.push(`%${search}%`);
+        params.push(`%${search}%`);
+      }
 
       let sql = `
         SELECT 
@@ -148,12 +155,12 @@ export class ProductRepository extends RepositoryBase {
           AND p.status ${modifier} ?
           ${featured ? ` AND p.is_featured = 1` : ""}
           ${category_id ? ` AND p.category_id = ?` : ""}
+          ${search ? ` AND (p.product_name LIKE ? OR p.sku LIKE ?)` : ""}
 
         ORDER BY p.product_id DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
-      console.log(sql, params);
-      
+
       const res = (await executeQuery(sql, params)) as any[];
 
       for (let i = 0; i < res.length; i++) {
@@ -167,6 +174,36 @@ export class ProductRepository extends RepositoryBase {
         limit,
         totalPages: Math.max(1, Math.ceil(total / limit)),
       });
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getProductCount() {
+    try {
+      const count = await new QueryBuilder("products")
+        .where("company_id = ?", this.companyId)
+        .where("status = ?", 1)
+        .count();
+
+      return this.success(count);
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  async getRecentProducts(limit = 5) {
+    try {
+      const sql = `
+        SELECT product_id, product_name, product_slug, base_price, created_on
+        FROM products
+        WHERE company_id = ?
+          AND status = 1
+        ORDER BY created_on DESC
+        LIMIT ${limit}
+      `;
+      const res = (await executeQuery(sql, [this.companyId])) as any[];
+      return this.success(res);
     } catch (error) {
       return this.handleError(error);
     }
