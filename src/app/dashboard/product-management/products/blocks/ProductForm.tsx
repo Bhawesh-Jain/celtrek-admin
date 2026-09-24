@@ -102,6 +102,7 @@ export const ProductFormSchema = z.object({
   status: z.boolean().default(true),
   is_featured: z.boolean().default(false),
   allow_backorders: z.boolean().default(false),
+  gst_included: z.boolean().default(false),
 
   meta_title: z.string()
     .max(60, "Meta title must be less than 60 characters")
@@ -210,6 +211,7 @@ interface ProductData {
   status: boolean
   is_featured: boolean
   allow_backorders: boolean
+  gst_included: boolean
   meta_title?: string
   meta_description?: string
   variants?: ProductVariant[]
@@ -271,6 +273,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
       status: true,
       is_featured: false,
       allow_backorders: false,
+      gst_included: false,
       meta_title: "",
       meta_description: "",
     },
@@ -359,8 +362,9 @@ export default function ProductForm({ productId }: { productId?: string }) {
             base_price: product.base_price?.toString() || "0",
             sku: product.sku || "",
             status: product.status === 1,
-            is_featured: product.is_featured === 1,
-            allow_backorders: product.allow_backorders === 1,
+            is_featured: product.is_featured == 1,
+            gst_included: product.gst_included == 1,
+            allow_backorders: product.allow_backorders == 1,
             meta_title: product.meta_title || "",
             meta_description: product.meta_description || "",
           };
@@ -1445,6 +1449,12 @@ export default function ProductForm({ productId }: { productId?: string }) {
                         name="allow_backorders"
                         label="Allow Backorders"
                         description="Allow purchases when out of stock"
+                      />
+                      <DefaultFormCheckbox
+                        form={form}
+                        name="gst_included"
+                        label="GST Included"
+                        description="Indicates if GST is included in the product price"
                       />
                     </div>
                   </CardContent>
