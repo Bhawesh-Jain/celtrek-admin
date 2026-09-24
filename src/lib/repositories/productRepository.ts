@@ -150,7 +150,8 @@ export class ProductRepository extends RepositoryBase {
           ON fallback_fl.id = (
                 SELECT id
                 FROM file_log
-                WHERE product_id = p.product_id
+                WHERE associated_id = p.product_id
+                  AND associated_type = 'product_image'
                   AND status = 1
                   AND company_id = ?
                 ORDER BY id ASC
