@@ -142,7 +142,7 @@ export class ProductRepository extends RepositoryBase {
           ON c.category_id = p.category_id
 
         LEFT JOIN file_log fl 
-          ON fl.id = p.product_main_image
+          ON (fl.id = p.product_main_image AND p.product_main_image IS NOT NULL)
           AND fl.status = 1
           AND fl.company_id = ?
 
