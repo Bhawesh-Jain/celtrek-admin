@@ -8,15 +8,17 @@ export async function getProductList({
   page = 1,
   limit = 10,
   search,
+  category_id,
 }: {
   page?: number;
   limit?: number;
   search?: string;
+  category_id?: string;
 }) {
   const session = await getSession();
 
   const repo = new ProductRepository(session.company_id);
-  return await repo.getProductList({ status: 0, modifier: '>', page, limit, search });
+  return await repo.getProductList({ status: 0, modifier: '>', page, limit, search, category_id });
 }
 
 export async function getProductById(identifier: string) {

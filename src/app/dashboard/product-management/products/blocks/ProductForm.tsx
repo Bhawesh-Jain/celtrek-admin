@@ -169,6 +169,7 @@ interface Category {
   category_id: number
   category_name: string
   category_slug: string
+  status?: number
 }
 
 interface ProductVariant {
@@ -442,12 +443,15 @@ export default function ProductForm({ productId }: { productId?: string }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const categoriesResult = await getCategoryList({});
+      // Fetch every non-deleted category (active and inactive), not just
+      // active ones, so a product already assigned to a since-deactivated
+      // category still shows and can be moved to a different one.
+      const categoriesResult = await getCategoryList({ status: -1, modifier: '>' });
       if (categoriesResult.success && categoriesResult.result) {
         setCategories(categoriesResult.result);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -1246,7 +1250,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                   placeholder="Select a category"
                   options={categories.map(cat => ({
                     value: cat.category_id.toString(),
-                    label: cat.category_name
+                    label: cat.status === 0 ? `${cat.category_name} (Inactive)` : cat.category_name
                   }))}
                   disabled={isSubmitting}
                 />

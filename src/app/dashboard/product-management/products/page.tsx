@@ -6,16 +6,29 @@ import { Container } from "@/components/ui/container";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlobalDialog } from "@/providers/DialogProvider";
 import { deleteProduct, getProductList, updateProductStatus } from "@/lib/actions/product";
+import { getCategoryList } from "@/lib/actions/category";
 import formatDate from "@/lib/utils/date";
 import { Button, ButtonTooltip } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Product } from "@/lib/repositories/productRepository";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Edit2, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { encryptIdForUrl } from "@/lib/utils/crypto";
 import ZoomableImage from "@/components/ZoomableImage";
+
+interface CategoryOption {
+  category_id: number;
+  category_name: string;
+}
 
 const PAGE_SIZE = 10;
 
@@ -25,17 +38,33 @@ export default function ProductListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("all");
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [reload, setReload] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const { showError, showDeleteConfirmation, setDialogLoading, showSuccess } = useGlobalDialog();
   const pathname = usePathname();
 
   useEffect(() => {
+    (async () => {
+      const result = await getCategoryList({});
+      if (result.success && result.result) {
+        setCategories(result.result);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!reload) return;
     (async () => {
       setIsLoading(true);
       try {
-        const result = await getProductList({ page, limit: PAGE_SIZE, search: search || undefined });
+        const result = await getProductList({
+          page,
+          limit: PAGE_SIZE,
+          search: search || undefined,
+          category_id: categoryId !== "all" ? categoryId : undefined,
+        });
         const data = result.result;
 
         // Supports both the paginated shape ({items, total, totalPages})
@@ -56,7 +85,7 @@ export default function ProductListPage() {
         setReload(false);
       }
     })();
-  }, [reload, page, search]);
+  }, [reload, page, search, categoryId]);
 
   const itemsRef = useRef<any[]>([]);
 
@@ -141,6 +170,12 @@ export default function ProductListPage() {
     setReload(true);
   };
 
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value);
+    setPage(1); // reset to page 1 whenever the category filter changes
+    setReload(true);
+  };
+
   const columns: Column<Product>[] = [
     {
       id: "product_image",
@@ -158,6 +193,13 @@ export default function ProductListPage() {
       id: "product_name",
       header: "Product Name",
       accessorKey: "product_name",
+      sortable: true,
+      visible: true,
+    },
+    {
+      id: "category_name",
+      header: "Category",
+      accessorKey: "category_name",
       sortable: true,
       visible: true,
     },
@@ -245,14 +287,30 @@ export default function ProductListPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="relative mb-4 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                defaultValue={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative max-w-sm w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  defaultValue={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <Select value={categoryId} onValueChange={handleCategoryChange}>
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.category_id} value={String(cat.category_id)}>
+                      {cat.category_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <DataTable

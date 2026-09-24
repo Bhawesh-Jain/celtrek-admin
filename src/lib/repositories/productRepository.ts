@@ -31,6 +31,9 @@ export interface Product {
   product_name: string;
   product_image: string;
 
+  category_id: number;
+  category_name: string;
+
   total_variants: number;
   base_price: number;
 
