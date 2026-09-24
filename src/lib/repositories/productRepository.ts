@@ -114,6 +114,7 @@ export class ProductRepository extends RepositoryBase {
           p.base_price,
           p.sale_price,
           p.status,
+          p.gst_included,
           p.created_on,
           p.updated_on,
           u.name as creator_name,
@@ -211,7 +212,7 @@ export class ProductRepository extends RepositoryBase {
   async getRecentProducts(limit = 5) {
     try {
       const sql = `
-        SELECT product_id, product_name, product_slug, base_price, sale_price, created_on
+        SELECT product_id, product_name, product_slug, base_price, sale_price, gst_included, created_on
         FROM products
         WHERE company_id = ?
           AND status = 1
@@ -292,6 +293,7 @@ export class ProductRepository extends RepositoryBase {
             p.product_slug,
             p.base_price,
             p.sale_price,
+            p.gst_included,
             p.sku,
             p.category_id,
             c.category_name,
@@ -371,6 +373,7 @@ export class ProductRepository extends RepositoryBase {
           product_description: data.product_description,
           base_price: data.base_price,
           sale_price: data.sale_price,
+          gst_included: data.gst_included,
           sku: data.sku,
           is_featured: data.is_featured,
           allow_backorders: data.allow_backorders,
@@ -466,6 +469,7 @@ export class ProductRepository extends RepositoryBase {
           product_name: data.product_name,
           product_slug: data.product_slug,
           category_id: data.category_id,
+          gst_included: data.gst_included,
           product_description: data.product_description,
           base_price: data.base_price,
           sale_price: data.sale_price,
