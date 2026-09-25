@@ -45,6 +45,7 @@ import {
   Edit,
   Trash2,
   Download,
+  IndianRupee,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -1204,7 +1205,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="pricing" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
-                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Pricing</span>
                   {tabHasError("pricing") && (
                     <span className="ml-2 h-2 w-2 rounded-full bg-red-500" />
@@ -1362,7 +1363,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
+                      <IndianRupee className="h-5 w-5" />
                       Pricing Information
                     </CardTitle>
                     <CardDescription>
@@ -1373,7 +1374,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                     <DefaultFormTextField
                       form={form}
                       name="base_price"
-                      label="Base Price ($)"
+                      label="MRP (₹)"
                       placeholder="0.00"
                       type="number"
                       step="0.01"
@@ -1383,7 +1384,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                     <DefaultFormTextField
                         form={form}
                         name="sale_price"
-                        label="Sale Price ($)"
+                        label="Sale Price (₹)"
                         placeholder="0.00 (optional)"
                         type="number"
                         step="0.01"
@@ -1411,10 +1412,10 @@ export default function ProductForm({ productId }: { productId?: string }) {
                               {salePrice < basePrice ? (
                                 <>
                                   <span className="text-lg font-bold text-green-600">
-                                    ${salePrice}
+                                    ₹{salePrice}
                                   </span>
                                   <span className="text-sm line-through text-muted-foreground">
-                                    ${basePrice}
+                                    ₹{basePrice}
                                   </span>
                                   <span className="text-sm font-medium text-green-600">
                                     {Math.round((1 - Number(salePrice) / Number(basePrice)) * 100)}% off
@@ -1422,7 +1423,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                                 </>
                               ) : (
                                 <span className="text-lg font-bold">
-                                  ${salePrice}
+                                  ₹{salePrice}
                                 </span>
                               )}
                             </div>
@@ -1532,11 +1533,11 @@ export default function ProductForm({ productId }: { productId?: string }) {
                               <Label htmlFor="additional-price">
                                 Additional Price
                                 <span className="ml-2 text-xs text-muted-foreground">
-                                  (Base: ${basePrice})
+                                  (Base: ₹{basePrice})
                                 </span>
                               </Label>
                               <div className="flex items-center">
-                                <span className="mr-2">$</span>
+                                <span className="mr-2">₹</span>
                                 <Input
                                   id="additional-price"
                                   type="number"
@@ -1860,7 +1861,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
                                       </div>
                                       {variant.additional_price > 0 && (
                                         <span className="text-xs text-green-600">
-                                          (+${variant.additional_price})
+                                          (+₹{variant.additional_price})
                                         </span>
                                       )}
                                     </div>
@@ -1944,9 +1945,9 @@ export default function ProductForm({ productId }: { productId?: string }) {
                           <div className="bg-muted/50 p-4 rounded-lg">
                             <p className="text-sm font-medium">Price Range</p>
                             <p className="text-2xl font-bold">
-                              ${calculateTotalPrice(basePrice,
+                              ₹{calculateTotalPrice(basePrice,
                                 Math.min(...variants.map(v => v.additional_price))
-                              )} - ${calculateTotalPrice(basePrice,
+                              )} - ₹{calculateTotalPrice(basePrice,
                                 Math.max(...variants.map(v => v.additional_price))
                               )}
                             </p>
